@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CGPA Calculator Web App</title>
+
+  <!-- jsPDF for PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+      margin: 20px;
+      padding: 0;
+      background: #f5f5f5;
+      color: #000;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background: #1e1e1e;
+      color: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .form-group {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .form-group label {
+      flex: 1;
+      min-width: 120px;
+      margin-right: 10px;
+    }
+
+    .form-group input {
+      flex: 2;
+      min-width: 200px;
+      padding: 4px;
+    }
+
+    .course-input-line {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .course-input-line input {
+      flex: 1;
+      padding: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      color: black;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+
+    .btn {
+      margin: 5px;
+      padding: 10px 15px;
+      background-color: #0a74da;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: #095aba;
+    }
+
+    .dark-mode .btn {
+      background-color: #444;
+      color: white;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 14px;
+      color: #777;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>CGPA Calculator Web App</h1>
+
+  <div class="form-group">
+    <label>Add University Name:</label>
+    <input type="text" id="universityName" />
+  </div>
+  <div class="form-group">
+    <label>Student Name:</label>
+    <input type="text" id="studentName" />
+  </div>
+  <div class="form-group">
+    <label>Student ID:</label>
+    <input type="text" id="studentID" />
+  </div>
+  <div class="form-group">
+    <label>Batch:</label>
+    <input type="text" id="batch" />
+  </div>
+  <div class="form-group">
+    <label>Department:</label>
+    <input type="text" id="department" />
+  </div>
+
+  <hr />
+  <div id="courseInputs"></div>
+
+  <button class="btn" onclick="addCourse()">➕ Add Course</button>
+  <button class="btn" onclick="calculateCGPA()">📊 Generate Grade Sheet</button>
+  <button class="btn" onclick="downloadPDF()">📄 Export PDF</button>
+  <button class="btn" onclick="exportExcel()">📥 Export Excel</button>
+  <button class="btn" onclick="saveToFile()">💾 Save</button>
+  <button class="btn" onclick="loadFromFile()">📂 Load</button>
+  <button class="btn" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+
+  <div id="result"></div>
+
+  <footer>Developed by NestedSin</footer>
+
+  <script>
+    let courseCount = 0;
+
+    function addCourse() {
+      const container = document.getElementById("courseInputs");
+      const div = document.createElement("div");
+      div.className = "course-input-line";
+      div.innerHTML = `
+        <input type="text" placeholder="Course Name" id="courseName${courseCount}" />
+        <input type="text" placeholder="Course Code" id="courseCode${courseCount}" />
+        <input type="number" placeholder="Credit" id="credit${courseCount}" />
+        <input type="number" step="0.01" placeholder="GPA" id="grade${courseCount}" />
+      `;
+      container.appendChild(div);
+      courseCount++;
+    }
+
+    function calculateCGPA() {
+      let totalCredits = 0;
+      let totalPoints = 0;
+      let resultHTML = `<h2>Grade Sheet</h2>`;
+
+      resultHTML += `
+        <p><strong>University Name:</strong> ${document.getElementById("universityName").value}</p>
+        <p><strong>Student Name:</strong> ${document.getElementById("studentName").value}</p>
+        <p><strong>Student ID:</strong> ${document.getElementById("studentID").value}</p>
+        <p><strong>Batch:</strong> ${document.getElementById("batch").value}</p>
+        <p><strong>Department:</strong> ${document.getElementById("department").value}</p>
+        <table>
+          <tr>
+            <th>Course Name</th>
+            <th>Course Code</th>
+            <th>Credit</th>
+            <th>GPA</th>
+          </tr>
+      `;
+
+      for (let i = 0; i < courseCount; i++) {
+        const name = document.getElementById(`courseName${i}`).value;
+        const code = document.getElementById(`courseCode${i}`).value;
+        const credit = parseFloat(document.getElementById(`credit${i}`).value);
+        const grade = parseFloat(document.getElementById(`grade${i}`).value);
+
+        if (!isNaN(credit) && !isNaN(grade)) {
+          totalCredits += credit;
+          totalPoints += credit * grade;
+          resultHTML += `
+            <tr>
+              <td>${name}</td>
+              <td>${code}</td>
+              <td>${credit}</td>
+              <td>${grade}</td>
+            </tr>
+          `;
+        }
+      }
+
+      const cgpa = (totalPoints / totalCredits).toFixed(2);
+      resultHTML += `</table><h3>Final CGPA: ${cgpa}</h3>`;
+      document.getElementById("result").innerHTML = resultHTML;
+    }
+
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.html(document.getElementById("result"), {
+        callback: function (doc) {
+          doc.save("GradeSheet.pdf");
+        },
+        x: 10,
+        y: 10
+      });
+    }
+
+    function exportExcel() {
+      const wb = XLSX.utils.book_new();
+      const table = document.querySelector("table");
+      const ws = XLSX.utils.table_to_sheet(table);
+      XLSX.utils.book_append_sheet(wb, ws, "GradeSheet");
+      XLSX.writeFile(wb, "GradeSheet.xlsx");
+    }
+
+    function saveToFile() {
+      let data = {
+        universityName: document.getElementById("universityName").value,
+        studentName: document.getElementById("studentName").value,
+        studentID: document.getElementById("studentID").value,
+        batch: document.getElementById("batch").value,
+        department: document.getElementById("department").value,
+        courses: []
+      };
+
+      for (let i = 0; i < courseCount; i++) {
+        data.courses.push({
+          name: document.getElementById(`courseName${i}`).value,
+          code: document.getElementById(`courseCode${i}`).value,
+          credit: document.getElementById(`credit${i}`).value,
+          grade: document.getElementById(`grade${i}`).value,
+        });
+      }
+
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "cgpa_data.json";
+      link.click();
+    }
+
+    function loadFromFile() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json";
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          const data = JSON.parse(reader.result);
+          document.getElementById("universityName").value = data.universityName;
+          document.getElementById("studentName").value = data.studentName;
+          document.getElementById("studentID").value = data.studentID;
+          document.getElementById("batch").value = data.batch;
+          document.getElementById("department").value = data.department;
+          document.getElementById("courseInputs").innerHTML = "";
+          courseCount = 0;
+          data.courses.forEach(c => {
+            addCourse();
+            document.getElementById(`courseName${courseCount - 1}`).value = c.name;
+            document.getElementById(`courseCode${courseCount - 1}`).value = c.code;
+            document.getElementById(`credit${courseCount - 1}`).value = c.credit;
+            document.getElementById(`grade${courseCount - 1}`).value = c.grade;
+          });
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+  </script>
+</body>
+</html>
+
